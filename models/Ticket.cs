@@ -17,7 +17,7 @@ namespace SoporteColegio.Models
 
         public string? DetalleAdicional { get; set; } // Comentario libre opcional
 
-        public DateTime FechaReporte { get; set; } = DateTime.Now;
+        public DateTime FechaReporte { get; set; } = DateTime.UtcNow;
 
         public string Estado { get; set; } = "Pendiente"; // Pendiente, En Proceso, Resuelto
     }
