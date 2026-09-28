@@ -130,7 +130,7 @@
                         <select class="state-select" aria-label="Cambiar estado del aviso @ticket.Id">
                             @foreach (var estado in new[] { "Pendiente", "En proceso", "Resuelto" })
                             {
-                                <option selected="@(ticket.Estado == estado)" value="@estado">@estado</option>
+                                <option value="@estado" selected="@(ticket.Estado == estado ? "selected" : null)">@estado</option>
                             }
                         </select>
                     </div>
@@ -138,6 +138,7 @@
             }
         </section>
     </main>
+    <partial name="_Chatbot" />
 
     <form id="anti-forgery-form" hidden>@Html.AntiForgeryToken()</form>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
@@ -170,12 +171,15 @@
             article.className = 'ticket';
             article.dataset.ticketId = ticket.id;
             article.dataset.status = ticket.estado;
+            const options = ['Pendiente', 'En proceso', 'Resuelto']
+                .map(value => `<option value="${escapeHtml(value)}" ${ticket.estado === value ? 'selected' : ''}>${escapeHtml(value)}</option>`)
+                .join('');
             article.innerHTML = `
                 <div class="ticket-head"><span class="ticket-id">AVISO #${escapeHtml(ticket.id)}</span><span class="status ${statusClass(ticket.estado)}">${escapeHtml(ticket.estado)}</span></div>
                 <h3 class="room">${escapeHtml(ticket.sala)}</h3>
                 <p class="problem"><strong>${escapeHtml(ticket.equipo)}:</strong> ${escapeHtml(ticket.problema)}</p>
                 ${ticket.detalle ? `<p class="detail">${escapeHtml(ticket.detalle)}</p>` : ''}
-                <div class="ticket-foot"><span class="date">${formatDate(ticket.fecha)}</span><select class="state-select" aria-label="Cambiar estado del aviso ${ticket.id}"><option selected>Pendiente</option><option>En proceso</option><option>Resuelto</option></select></div>`;
+                <div class="ticket-foot"><span class="date">${formatDate(ticket.fecha)}</span><select class="state-select" aria-label="Cambiar estado del aviso ${ticket.id}">${options}</select></div>`;
             return article;
         }
 
@@ -209,7 +213,7 @@
             }
         });
 
-        const connection = new signalR.HubConnectionBuilder().withUrl('/soporteHub').withAutomaticReconnect().build();
+        const connection = new signalR.HubConnectionBuilder().withUrl('/Tecnico/soporteHub').withAutomaticReconnect().build();
         connection.on('TicketCreado', ticket => {
             emptyState?.remove();
             list.prepend(createTicketCard(ticket));

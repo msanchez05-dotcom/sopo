@@ -3,3 +3,13 @@ __pycache__/
 .venv/
 venv/
 .env
+
+# .NET build and publish output
+[Bb]in/
+[Oo]bj/
+publish/
+
+# Local SQLite data
+*.db
+*.db-shm
+*.db-wal

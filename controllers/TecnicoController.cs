@@ -19,6 +19,22 @@ public class TecnicoController : Controller
         this.hubContext = hubContext;
     }
 
+    private static string NormalizarEstado(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado))
+        {
+            return string.Empty;
+        }
+
+        var texto = estado.Trim();
+        if (texto.Equals("En Proceso", StringComparison.OrdinalIgnoreCase))
+        {
+            return "En proceso";
+        }
+
+        return EstadosPermitidos.FirstOrDefault(item => item.Equals(texto, StringComparison.OrdinalIgnoreCase)) ?? texto;
+    }
+
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -37,7 +53,9 @@ public class TecnicoController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ActualizarEstado(int id, string estado)
     {
-        if (!EstadosPermitidos.Contains(estado, StringComparer.OrdinalIgnoreCase))
+        var estadoNormalizado = NormalizarEstado(estado);
+
+        if (!EstadosPermitidos.Contains(estadoNormalizado, StringComparer.OrdinalIgnoreCase))
         {
             return BadRequest("Estado no valido.");
         }
@@ -52,7 +70,7 @@ public class TecnicoController : Controller
             return NotFound();
         }
 
-        ticket.Estado = EstadosPermitidos.First(item => item.Equals(estado, StringComparison.OrdinalIgnoreCase));
+        ticket.Estado = estadoNormalizado;
         await context.SaveChangesAsync();
 
         await hubContext.Clients.All.SendAsync("TicketActualizado", new

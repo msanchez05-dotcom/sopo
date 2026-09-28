@@ -1,0 +1,193 @@
+<style>
+    .faq-chatbot { font-family: Arial, sans-serif; }
+    .faq-chat-toggle { position: fixed; right: 20px; bottom: 20px; z-index: 1000; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 18px; border: 0; border-radius: 3px; color: white; background: var(--teal-dark, #075e5a); box-shadow: 0 8px 24px rgba(23, 36, 43, .2); cursor: pointer; font: 700 14px Arial, sans-serif; }
+    .faq-chat-toggle:hover { background: var(--teal, #087f78); }
+    .faq-chat-mark { display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid rgba(255,255,255,.8); border-radius: 50%; font-size: 15px; }
+    .faq-chat-panel { position: fixed; right: 20px; bottom: 80px; z-index: 1000; display: grid; grid-template-rows: auto minmax(120px, 1fr) auto auto; width: min(370px, calc(100vw - 28px)); max-height: min(560px, calc(100vh - 100px)); overflow: hidden; border: 1px solid #cbd5d1; border-radius: 4px; background: #fff; box-shadow: 0 18px 48px rgba(23, 36, 43, .24); }
+    .faq-chat-panel[hidden] { display: none; }
+    .faq-chat-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 17px; color: white; background: var(--teal-dark, #075e5a); }
+    .faq-chat-header h2 { margin: 0; font: 700 15px Arial, sans-serif; }
+    .faq-chat-close { min-width: 40px; min-height: 36px; padding: 0 8px; border: 1px solid rgba(255,255,255,.5); border-radius: 2px; color: white; background: transparent; cursor: pointer; font: 13px Arial, sans-serif; }
+    .faq-chat-messages { display: flex; flex-direction: column; gap: 10px; min-height: 150px; padding: 16px; overflow-y: auto; background: #f5f7f5; }
+    .faq-chat-message { max-width: 90%; padding: 11px 12px; border: 1px solid #dce4df; color: #17242b; background: white; font: 13px/1.45 Arial, sans-serif; overflow-wrap: anywhere; }
+    .faq-chat-message.user { align-self: flex-end; border-color: #c2ded8; background: #e7f3ef; }
+    .faq-chat-suggestions { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px 12px; border-top: 1px solid #e0e5e2; }
+    .faq-chat-suggestion { padding: 7px 9px; border: 1px solid #b9cbc5; border-radius: 2px; color: #075e5a; background: white; cursor: pointer; font: 12px Arial, sans-serif; }
+    .faq-chat-suggestion:hover { border-color: #087f78; background: #edf6f3; }
+    .faq-chat-form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #e0e5e2; }
+    .faq-chat-input { flex: 1; min-width: 0; min-height: 42px; padding: 0 11px; border: 1px solid #bdc9c5; border-radius: 2px; color: #17242b; background: white; font: 14px Arial, sans-serif; }
+    .faq-chat-input:focus { outline: 3px solid rgba(8, 127, 120, .18); border-color: #087f78; }
+    .faq-chat-send { min-height: 42px; padding: 0 13px; border: 0; border-radius: 2px; color: white; background: #087f78; cursor: pointer; font: 700 13px Arial, sans-serif; }
+    .faq-chat-send:hover { background: #075e5a; }
+    .faq-chat-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    @@keyframes faq-chat-enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+    @@media (max-width: 520px) {
+        .faq-chat-toggle { right: 12px; bottom: 12px; }
+        .faq-chat-panel { right: 12px; bottom: 70px; max-height: calc(100vh - 86px); }
+    }
+</style>
+
+@{
+    var isTechnicianPage = ViewContext.RouteData.Values["controller"]?.ToString() == "Tecnico";
+}
+
+<div class="faq-chatbot" id="faq-chatbot" data-controller="@(ViewContext.RouteData.Values["controller"]?.ToString())">
+    <button class="faq-chat-toggle" id="faq-chat-toggle" type="button" aria-expanded="false" aria-controls="faq-chat-panel">
+        <span class="faq-chat-mark" aria-hidden="true">?</span> Ayuda
+    </button>
+    <section class="faq-chat-panel" id="faq-chat-panel" aria-label="Asistente de ayuda" hidden>
+        <header class="faq-chat-header">
+            <h2>Ayuda rápida</h2>
+            <button class="faq-chat-close" id="faq-chat-close" type="button" aria-label="Cerrar ayuda">Cerrar</button>
+        </header>
+        <div class="faq-chat-messages" id="faq-chat-messages" role="log" aria-live="polite" aria-relevant="additions">
+            <div class="faq-chat-message">
+                @if (isTechnicianPage)
+                {
+                    <text>Hola. Puedo ayudarte a priorizar reportes, revisar fallas y actualizar el estado de cada aviso.</text>
+                }
+                else
+                {
+                    <text>Hola. Puedo orientarte para crear un aviso, revisar su estado o probar una solución básica.</text>
+                }
+            </div>
+        </div>
+        <div class="faq-chat-suggestions" aria-label="Preguntas frecuentes">
+            @if (isTechnicianPage)
+            {
+                <button class="faq-chat-suggestion" type="button">Priorizar pendientes</button>
+                <button class="faq-chat-suggestion" type="button">Cambiar estado del aviso</button>
+                <button class="faq-chat-suggestion" type="button">No aparece un aviso</button>
+            }
+            else
+            {
+                <button class="faq-chat-suggestion" type="button">Crear un aviso</button>
+                <button class="faq-chat-suggestion" type="button">Revisar un proyector</button>
+                <button class="faq-chat-suggestion" type="button">Consultar estados</button>
+            }
+        </div>
+        <form class="faq-chat-form" id="faq-chat-form">
+            <label class="faq-chat-visually-hidden" for="faq-chat-input">Escribe tu pregunta</label>
+            <input class="faq-chat-input" id="faq-chat-input" maxlength="300" autocomplete="off" placeholder="Escribe tu pregunta..." />
+            <button class="faq-chat-send" type="submit">Enviar</button>
+        </form>
+    </section>
+</div>
+
+<script>
+    (() => {
+        const panel = document.getElementById('faq-chat-panel');
+        const toggle = document.getElementById('faq-chat-toggle');
+        const close = document.getElementById('faq-chat-close');
+        const messages = document.getElementById('faq-chat-messages');
+        const form = document.getElementById('faq-chat-form');
+        const input = document.getElementById('faq-chat-input');
+        const isTechnician = document.getElementById('faq-chatbot').dataset.controller === 'Tecnico';
+
+        const answers = question => {
+            const text = question.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (/\b(hola|buenos dias|buenas tardes)\b/.test(text)) {
+                return isTechnician
+                    ? 'Hola. Puedo orientarte para priorizar reportes, actualizar estados y revisar problemas comunes de equipos.'
+                    : 'Hola. Dime qué equipo presenta el problema y qué observas. Puedo ayudarte con proyectores, computadores, internet, audio y el registro de avisos.';
+            }
+            if (isTechnician && /prioridad|priorizar|urgente|primero|orden/.test(text)) {
+                return 'El panel no asigna prioridad automáticamente. Usa el filtro «Pendientes» para ver los avisos que aún no comenzaron y revisa la sala, el equipo y el detalle. Como criterio de atención, considera primero los problemas que afectan a toda una sala o interrumpen una clase; luego cambia el estado a «En proceso» cuando comiences a atenderlos.';
+            }
+            if (isTechnician && /cambiar|actualizar|marcar/.test(text) && /estado|pendiente|proceso|resuelto/.test(text)) {
+                return 'En la tarjeta del aviso, abre el selector de estado al pie y elige «En proceso» al comenzar la atención o «Resuelto» después de comprobar que el equipo funciona. El cambio se guarda automáticamente y se refleja en el contador y en las demás sesiones abiertas. Si aparece un error, recarga el panel y vuelve a intentarlo.';
+            }
+            if (isTechnician && /nuevo|llega|recibe|no veo|no aparece|en vivo/.test(text)) {
+                return 'Los avisos nuevos aparecen al inicio de la lista mientras el panel esté conectado. Si no aparece uno esperado, comprueba el filtro «Todos», espera a que se restablezca la conexión y recarga el panel; los reportes guardados vuelven a cargarse desde la base de datos.';
+            }
+            if (/estado|pendiente|proceso|resuelto|seguimiento/.test(text)) {
+                return isTechnician
+                    ? '«Pendiente» significa que aún no se inicia la atención; «En proceso», que ya se está revisando; y «Resuelto», que el problema fue solucionado. Cambia el estado desde el selector de cada tarjeta. La lista se actualiza en vivo y los contadores resumen cada estado.'
+                    : 'Después de enviar el aviso verás una confirmación de recepción. El equipo técnico administra los estados Pendiente, En proceso y Resuelto desde su panel; esta página de profesor no consulta un aviso individual. Para preguntar por uno, indica a soporte la sala, el equipo y cuándo lo reportaste.';
+            }
+            if (/proyector|imagen|pantalla|hdmi/.test(text)) {
+                if (/no enciende|no prende|no prende|sin energia|sin energía|no tiene luz/.test(text)) {
+                    if (isTechnician) return 'Para un proyector que no enciende, confirma el indicador de corriente, prueba el botón de encendido y revisa solo el enchufe y los cables externos. No abras el equipo ni manipules conexiones eléctricas. Mantén el aviso «En proceso» mientras lo revisas; márcalo «Resuelto» solo después de comprobar que enciende y proyecta.';
+                    return 'Si el proyector no enciende: 1) confirma que el indicador de corriente esté encendido; 2) prueba el botón de encendido del equipo; 3) revisa solo que el enchufe y los cables externos estén firmes. No abras el proyector ni manipules conexiones eléctricas. Si sigue apagado, registra el aviso como «Proyector: No enciende» e indica la sala y si aparece alguna luz.';
+                }
+                if (/sin imagen|no da imagen|pantalla negra|sin senal|no detecta|no muestra/.test(text)) {
+                    if (isTechnician) return 'Si el proyector enciende pero no muestra imagen, comprueba el HDMI en ambos extremos, selecciona la entrada correcta (por ejemplo, HDMI 1) y en Windows prueba Windows + P > «Duplicar». Mantén el aviso «En proceso» durante las pruebas y confirma imagen antes de cambiarlo a «Resuelto».';
+                    return 'Si está encendido pero no muestra imagen: 1) conecta firmemente el HDMI al computador y al proyector; 2) selecciona en el proyector la entrada usada (por ejemplo, HDMI 1); 3) en Windows, pulsa Windows + P y elige «Duplicar». Si continúa sin señal, registra «Proyector: No da imagen / Pantalla azul» y anota qué entrada probaste.';
+                }
+                if (isTechnician) return 'Primero identifica si el proyector no enciende o enciende sin imagen. Revisa la alimentación externa, el HDMI y la entrada seleccionada; no abras ni muevas el equipo. Mantén «En proceso» durante la revisión y usa «Resuelto» solo tras verificar que funciona.';
+                return 'Primero distingue el síntoma: si no enciende, revisa el indicador de corriente y usa el aviso «Proyector: No enciende»; si enciende pero no proyecta, comprueba el HDMI y selecciona la entrada correcta. No abras ni muevas el equipo. Si no se resuelve, registra el aviso con la sala y el síntoma exacto.';
+            }
+            if (/internet|wifi|red/.test(text)) {
+                if (isTechnician) return 'Comprueba que el modo avión esté desactivado, reconecta el Wi-Fi y verifica si otros equipos de la misma sala tienen acceso. Si afecta a varios equipos, considera un problema de red más amplio. Mantén el ticket «En proceso» hasta recuperar y probar la conexión; no incluyas contraseñas.';
+                return 'Para revisar la conexión: 1) confirma que el modo avión esté desactivado; 2) desconecta y vuelve a conectar el Wi-Fi; 3) prueba si otro equipo de la sala tiene internet. Si falla solo un equipo, anota cuál; si fallan varios, indícalo también. Luego registra «PC: No tiene internet» con la sala y cualquier mensaje que aparezca. No compartas contraseñas en el aviso.';
+            }
+            if (/crear|reportar|aviso|ticket/.test(text)) {
+                return isTechnician
+                    ? 'Los avisos se registran desde el formulario de profesores en «/Profesor». En este panel técnico puedes revisarlos, filtrarlos y cambiar su estado, pero no crear avisos nuevos.'
+                    : 'Para reportar: 1) selecciona la sala; 2) elige el problema que más se parece a lo ocurrido; 3) en el detalle opcional escribe el equipo afectado, desde cuándo sucede, el mensaje de error y qué comprobaste (máximo 500 caracteres); 4) pulsa «Enviar aviso». Verás una confirmación y el ticket quedará pendiente para soporte. No incluyas contraseñas.';
+            }
+            if (/mouse|raton|teclado/.test(text)) {
+                if (isTechnician) return 'Revisa que el cable o receptor USB esté firme; si es inalámbrico, comprueba el interruptor y las pilas; prueba otro puerto USB disponible. Verifica cursor y teclas después. Mantén «En proceso» si persiste y marca «Resuelto» solo cuando el periférico responda.';
+                return 'Si el mouse o teclado no responde: 1) revisa que el cable o receptor USB esté firme; 2) si es inalámbrico, comprueba el interruptor y las pilas; 3) prueba otro puerto USB disponible. Si sigue igual, selecciona «Mouse/Teclado: No responde el cursor o teclas» e indica cuál de los dos falla.';
+            }
+            if (/parlante|audio|sonido/.test(text)) {
+                if (isTechnician) return 'Comprueba el volumen y el silencio, selecciona la salida correcta y revisa las conexiones externas de los parlantes. Prueba reproducir audio después de cada ajuste. Deja el aviso «En proceso» si continúa sin sonido y cámbialo a «Resuelto» tras confirmar el audio.';
+                return 'Si no se escucha el audio: 1) sube el volumen y comprueba que no esté silenciado; 2) revisa que la salida de sonido seleccionada sea la correcta; 3) comprueba las conexiones externas de los parlantes. Si continúa, registra «Parlantes: No se escucha el audio» e indica si el problema ocurre en un equipo o en toda la sala.';
+            }
+            if (/pc|computador|computadora|enciende|encender/.test(text)) {
+                if (/no enciende|no prende|no inicia/.test(text)) {
+                    if (isTechnician) return 'Comprueba la conexión externa, pulsa una vez el botón de encendido y observa si aparecen luces o sonidos. No abras el equipo. Mantén el aviso «En proceso» mientras lo revisas; marca «Resuelto» únicamente después de iniciar el PC y confirmar imagen.';
+                    return 'Si el computador no enciende: 1) comprueba que el cable externo esté conectado; 2) pulsa una vez el botón de encendido y espera unos segundos; 3) observa si aparece alguna luz o sonido. No abras el equipo. Registra «PC: No enciende / No da video» y describe qué señal viste.';
+                }
+                if (/sin video|no da video|pantalla negra|no muestra/.test(text)) {
+                    if (isTechnician) return 'Confirma que el monitor esté encendido, revisa el cable de video en ambos extremos y selecciona la entrada correcta. Comprueba que aparezca imagen antes de cerrar la atención. Si no se resuelve, deja el aviso «En proceso».';
+                    return 'Si el computador enciende pero no da video: 1) confirma que el monitor esté encendido; 2) revisa la conexión visible del cable de video en ambos extremos; 3) selecciona en el monitor la entrada correcta. Si no vuelve la imagen, registra «PC: No enciende / No da video» e indica si el computador muestra luces.';
+                }
+                if (isTechnician) return 'Revisa únicamente cables y controles externos. Consulta el síntoma descrito en el aviso; mantén «En proceso» durante las pruebas y cambia a «Resuelto» solo después de verificar el computador.';
+                return 'Para orientarte mejor, dime si el computador no enciende, no muestra imagen, está lento o tiene otro síntoma. Revisa únicamente cables y controles externos; no abras el equipo. Si persiste, selecciona «PC: No enciende / No da video» y describe el síntoma en el detalle.';
+            }
+            return isTechnician
+                ? 'No encuentro una guía exacta para ese caso. Revisa el equipo y el detalle del aviso seleccionado. Mantén el estado «En proceso» mientras investigas; marca «Resuelto» solo cuando confirmes que el problema quedó solucionado.'
+                : 'No encuentro una guía exacta para ese caso. Indica qué equipo falla, qué ocurre, desde cuándo y si aparece un mensaje. Para pedir ayuda, selecciona la sala y el problema más cercano en el formulario; agrega esos datos en el detalle y envía el aviso. No compartas contraseñas ni abras los equipos.';
+        };
+
+        const addMessage = (text, sender) => {
+            const message = document.createElement('div');
+            message.className = `faq-chat-message${sender === 'user' ? ' user' : ''}`;
+            message.textContent = text;
+            messages.appendChild(message);
+            messages.scrollTop = messages.scrollHeight;
+        };
+
+        const openPanel = open => {
+            panel.hidden = !open;
+            toggle.setAttribute('aria-expanded', String(open));
+            if (open) input.focus();
+        };
+
+        const ask = question => {
+            const trimmed = question.trim();
+            if (!trimmed) return;
+            addMessage(trimmed, 'user');
+            addMessage(answers(trimmed), 'bot');
+            input.value = '';
+            input.focus();
+        };
+
+        toggle.addEventListener('click', () => openPanel(panel.hidden));
+        close.addEventListener('click', () => openPanel(false));
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            ask(input.value);
+        });
+        document.querySelectorAll('.faq-chat-suggestion').forEach(button => {
+            button.addEventListener('click', () => ask(button.textContent));
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !panel.hidden) {
+                openPanel(false);
+                toggle.focus();
+            }
+        });
+    })();
+</script>

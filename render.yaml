@@ -1,12 +1,15 @@
 services:
   - type: web
     name: soporte-colegio
-    runtime: dotnet
+    runtime: docker
     plan: free
-    buildCommand: dotnet publish -c Release -o publish
-    startCommand: dotnet ./publish/SoporteColegio.dll
+    healthCheckPath: /
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
-      - key: ASPNETCORE_URLS
-        value: http://0.0.0.0:$PORT
+      - key: DATABASE_URL
+        sync: false
+      - key: TECHNICIAN_USERNAME
+        sync: false
+      - key: TECHNICIAN_PASSWORD
+        sync: false
