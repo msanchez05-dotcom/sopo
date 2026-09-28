@@ -60,7 +60,7 @@ app.Use(async (context, next) =>
 
     if (!HasValidTechnicianCredentials(context.Request, technicianUsername!, technicianPassword!))
     {
-        context.Response.Headers.WWWAuthenticate = "Basic realm=\"Soporte Colegio Técnico\", charset=\"UTF-8\"";
+        context.Response.Headers.WWWAuthenticate = "Basic realm=\"Soporte Colegio Tecnico\", charset=\"UTF-8\"";
         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
     }
