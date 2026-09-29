@@ -1,0 +1,134 @@
+@model SoporteColegio.ViewModels.TecnicoHistorialViewModel
+@{
+    ViewData["Title"] = "Historial de tickets";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] | Soporte Colegio</title>
+    <style>
+        :root {
+            --ink: #17242b;
+            --muted: #6c7b80;
+            --paper: #eef2ef;
+            --panel: #ffffff;
+            --line: #d7dfdb;
+            --teal: #087f78;
+            --teal-dark: #075e5a;
+            --amber: #c48422;
+            --shadow: 0 12px 30px rgba(29, 55, 56, .09);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; color: var(--ink); background: var(--paper); font-family: Arial, sans-serif; }
+        main { width: min(100% - 32px, 1060px); margin: 0 auto; padding: 28px 0 50px; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
+        .brand { font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .button, .button-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 14px; border-radius: 18px; font-size: 12px; font-weight: 700; text-decoration: none; }
+        .button { background: var(--teal); color: white; }
+        .button-secondary { border: 1px solid var(--line); background: white; color: var(--ink); }
+        h1 { margin: 0 0 18px; font-size: clamp(30px, 4vw, 42px); }
+        .filters { background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); padding: 18px; margin-bottom: 18px; }
+        .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+        label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+        input, select { width: 100%; min-height: 40px; border: 1px solid var(--line); padding: 8px 10px; font-size: 14px; }
+        .toolbar { display: flex; justify-content: flex-end; margin-top: 16px; }
+        table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); }
+        th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; font-size: 13px; }
+        th { background: #f3f7f5; letter-spacing: .04em; text-transform: uppercase; font-size: 11px; }
+        .status { padding: 6px 9px; border-radius: 14px; font-size: 11px; font-weight: 700; }
+        .status.pendiente { color: #a64d37; background: #fff0e9; }
+        .status.en-proceso { color: #916317; background: #fff6dc; }
+        .status.resuelto { color: var(--teal-dark); background: #e5f3eb; }
+        .empty { padding: 32px; background: var(--panel); border: 1px dashed var(--line); text-align: center; color: var(--muted); }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="topbar">
+            <span class="brand">Soporte colegio / Historial</span>
+            <div class="actions">
+                <a class="button-secondary" href="/Tecnico">Volver al panel</a>
+                <a class="button" href="/Tecnico/ExportarCsv?filtro=@Model.Filtro&fechaDesde=@Model.FechaDesde&fechaHasta=@Model.FechaHasta&salaId=@Model.SalaId">Exportar CSV</a>
+            </div>
+        </div>
+
+        <h1>Historial de avisos</h1>
+
+        <section class="filters">
+            <form method="get" asp-action="Historial">
+                <div class="filters-grid">
+                    <div>
+                        <label for="filtro">Estado</label>
+                        <select id="filtro" name="filtro">
+                            @foreach (var estado in new[] { "Todos", "Pendiente", "En proceso", "Resuelto" })
+                            {
+                                <option value="@estado" selected="@(Model.Filtro == estado ? "selected" : null)">@estado</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label for="fechaDesde">Desde</label>
+                        <input id="fechaDesde" name="fechaDesde" type="date" value="@Model.FechaDesde" />
+                    </div>
+                    <div>
+                        <label for="fechaHasta">Hasta</label>
+                        <input id="fechaHasta" name="fechaHasta" type="date" value="@Model.FechaHasta" />
+                    </div>
+                    <div>
+                        <label for="salaId">Sala</label>
+                        <select id="salaId" name="salaId">
+                            <option value="">Todas</option>
+                            @foreach (var sala in Model.Salas)
+                            {
+                                <option value="@sala.Id" selected="@(Model.SalaId == sala.Id ? "selected" : null)">@sala.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="toolbar">
+                    <button class="button" type="submit">Aplicar filtros</button>
+                </div>
+            </form>
+        </section>
+
+        @if (Model.Tickets.Count == 0)
+        {
+            <div class="empty">No hay registros para los filtros actuales.</div>
+        }
+        else
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Sala</th>
+                        <th>Equipo</th>
+                        <th>Problema</th>
+                        <th>Detalle</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ticket in Model.Tickets)
+                    {
+                        var statusClass = ticket.Estado.ToLowerInvariant().Replace(" ", "-");
+                        <tr>
+                            <td>@ticket.Id</td>
+                            <td>@(ticket.Sala?.Nombre ?? "-")</td>
+                            <td>@(ticket.FallaComun?.Equipo ?? "-")</td>
+                            <td>@(ticket.FallaComun?.Descripcion ?? "-")</td>
+                            <td>@(string.IsNullOrWhiteSpace(ticket.DetalleAdicional) ? "-" : ticket.DetalleAdicional)</td>
+                            <td><span class="status @statusClass">@ticket.Estado</span></td>
+                            <td>@ticket.FechaReporte.ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </main>
+</body>
+</html>

@@ -7,6 +7,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
 var port = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrWhiteSpace(port))
 {
@@ -47,6 +50,21 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
+app.UseExceptionHandler(exceptionHandlerApp =>
+{
+    exceptionHandlerApp.Run(async context =>
+    {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+
+        logger.LogError(exception, "Error no controlado en la aplicación. Path: {Path}", context.Request.Path);
+
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "text/plain; charset=utf-8";
+        await context.Response.WriteAsync("Ocurrió un error inesperado. El equipo de soporte ha sido notificado.");
+    });
+});
+
 app.Use(async (context, next) =>
 {
     var isTechnicianRoute = context.Request.Path.StartsWithSegments("/Tecnico") ||
@@ -77,6 +95,7 @@ using (var scope = app.Services.CreateScope())
 app.MapControllerRoute(
 	name: "default",
 	pattern: "{controller=Profesor}/{action=Index}/{id?}");
+app.MapHub<SoporteColegio.Hubs.SoporteHub>("/notificaciones-soporte");
 app.MapHub<SoporteColegio.Hubs.SoporteHub>("/Tecnico/soporteHub");
 
 app.Run();

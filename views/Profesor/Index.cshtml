@@ -38,7 +38,9 @@
         .step { display: grid; grid-template-columns: 34px 1fr; gap: 14px; padding: 0 0 28px; }
         .step + .step { padding-top: 28px; border-top: 1px solid var(--line); }
         .number { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: white; background: var(--teal); font: 700 14px Arial, sans-serif; }
+        .field-group { width: 100%; }
         label, legend { display: block; margin-bottom: 10px; font: 700 14px Arial, sans-serif; }
+        .required-mark { color: var(--coral); }
         select, textarea { width: 100%; border: 1px solid #bdc9c5; border-radius: 2px; color: var(--ink); background: white; font: 16px/1.4 Arial, sans-serif; }
         select { min-height: 52px; padding: 0 14px; }
         textarea { min-height: 108px; padding: 14px; resize: vertical; }
@@ -49,8 +51,13 @@
         .actions { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-top: 4px; }
         button { min-height: 52px; padding: 0 22px; border: 0; border-radius: 2px; color: white; background: var(--coral); cursor: pointer; font: 700 15px Arial, sans-serif; }
         button:hover { background: #cf5f49; }
+        button:disabled { opacity: .7; cursor: progress; }
         .success { margin: 0 0 22px; padding: 14px 16px; border-left: 4px solid var(--teal); color: var(--teal-dark); background: #e3f1e8; font: 15px/1.45 Arial, sans-serif; }
+        .status-box { display: none; margin: 0 0 18px; padding: 14px 16px; border-left: 4px solid var(--coral); color: var(--ink); background: #fff5ea; font: 15px/1.45 Arial, sans-serif; }
+        .status-box.visible { display: block; }
         .privacy { margin: 0; color: var(--muted); font: 12px/1.4 Arial, sans-serif; }
+        .toast { position: fixed; right: 20px; bottom: 20px; max-width: 320px; padding: 14px 16px; color: white; background: var(--teal-dark); box-shadow: var(--shadow); font: 14px/1.4 Arial, sans-serif; opacity: 0; transform: translateY(12px); transition: opacity .25s ease, transform .25s ease; }
+        .toast.visible { opacity: 1; transform: translateY(0); }
         @@media (max-width: 520px) {
             main { width: min(100% - 24px, 760px); padding-top: 16px; }
             .topline { margin-bottom: 34px; }
@@ -70,21 +77,23 @@
         <h1>¿Qué ocurre en tu sala?</h1>
         <p class="intro">Cuéntanos dónde estás y qué equipo necesita ayuda. El equipo de soporte recibirá el aviso de inmediato.</p>
 
+        <div id="profesor-notificaciones" class="status-box" aria-live="polite"></div>
+
         @if (TempData["TicketCreado"] is string message)
         {
             <p class="success" role="status">@message</p>
         }
 
-        <form asp-action="Registrar" method="post" class="form-panel">
+        <form id="ticket-form" asp-action="Registrar" method="post" class="form-panel" novalidate>
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
 
             <div class="step">
                 <span class="number">1</span>
-                <div>
-                    <label asp-for="SalaId">¿En qué sala estás?</label>
+                <div class="field-group">
+                    <label asp-for="SalaId">¿En qué sala estás? <span class="required-mark">*</span></label>
                     <p class="hint">Selecciona la sala o espacio donde ocurre el problema.</p>
-                    <select asp-for="SalaId">
+                    <select asp-for="SalaId" required>
                         <option value="">Selecciona una sala</option>
                         @foreach (var sala in Model.Salas)
                         {
@@ -97,10 +106,10 @@
 
             <div class="step">
                 <span class="number">2</span>
-                <div>
-                    <label asp-for="FallaComunId">¿Qué problema encontraste?</label>
+                <div class="field-group">
+                    <label asp-for="FallaComunId">¿Qué problema encontraste? <span class="required-mark">*</span></label>
                     <p class="hint">Elige la opción que mejor describe lo que ves.</p>
-                    <select asp-for="FallaComunId">
+                    <select asp-for="FallaComunId" required>
                         <option value="">Selecciona un problema</option>
                         @foreach (var falla in Model.FallasComunes)
                         {
@@ -113,7 +122,7 @@
 
             <div class="step">
                 <span class="number">3</span>
-                <div>
+                <div class="field-group">
                     <label asp-for="DetalleAdicional">¿Quieres agregar algo más?</label>
                     <p class="hint">Opcional. Por ejemplo: número del equipo, mensaje en pantalla o cuándo comenzó.</p>
                     <textarea asp-for="DetalleAdicional" maxlength="500" placeholder="Escribe un detalle breve..."></textarea>
@@ -123,10 +132,65 @@
 
             <div class="actions">
                 <p class="privacy">Tu aviso quedará registrado como pendiente.</p>
-                <button type="submit">Enviar aviso</button>
+                <button id="submit-button" type="submit">Enviar aviso</button>
             </div>
         </form>
     </main>
     <partial name="_Chatbot" />
+    <div id="toast" class="toast" aria-live="polite"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script>
+        const notificationBox = document.getElementById('profesor-notificaciones');
+        const form = document.getElementById('ticket-form');
+        const submitButton = document.getElementById('submit-button');
+        const toast = document.getElementById('toast');
+
+        function showNotification(message) {
+            if (!notificationBox) return;
+            notificationBox.textContent = message;
+            notificationBox.classList.add('visible');
+            setTimeout(() => notificationBox.classList.remove('visible'), 5000);
+        }
+
+        function showToast(message) {
+            if (!toast) return;
+            toast.textContent = message;
+            toast.classList.add('visible');
+            setTimeout(() => toast.classList.remove('visible'), 4200);
+        }
+
+        form?.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                form.reportValidity();
+                return;
+            }
+
+            submitButton.disabled = true;
+            showToast('Enviando aviso...');
+        });
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl('/notificaciones-soporte')
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on('TicketCreado', ticket => {
+            showNotification(`Nuevo aviso recibido en ${ticket.sala}. El equipo de soporte ya lo está revisando.`);
+        });
+
+        connection.on('TicketRecibido', notification => {
+            showNotification(notification.mensaje || 'Su aviso fue recibido por el equipo de soporte.');
+        });
+
+        connection.on('TicketEstadoActualizado', notification => {
+            if (notification && notification.mensaje) {
+                showNotification(notification.mensaje);
+            }
+        });
+
+        connection.start().catch(error => console.error('SignalR del profesor no disponible:', error));
+    </script>
 </body>
 </html>

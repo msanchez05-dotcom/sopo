@@ -1,0 +1,10 @@
+.dockerignore
+.gitignore
+Dockerfile
+Program.cs
+README.md
+controllers/TecnicoController.cs
+render.yaml
+views/Profesor/Index.cshtml
+views/Shared/_Chatbot.cshtml
+views/Tecnico/Index.cshtml
