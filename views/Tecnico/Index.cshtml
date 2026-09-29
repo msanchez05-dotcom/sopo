@@ -236,14 +236,6 @@
             applyFilter();
         });
 
-        connection.on('TicketEstadoActualizado', notification => {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.textContent = notification.mensaje || `Aviso #${notification.id}: ${notification.estado}`;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 5000);
-        });
-
         connection.start().catch(error => console.error('SignalR no disponible:', error));
     </script>
 </body>

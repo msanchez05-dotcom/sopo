@@ -203,11 +203,6 @@ public class TecnicoController : Controller
         await hubContext.Clients.All.SendAsync("TicketActualizado", new { id = ticket.Id, estado = ticket.Estado });
         await hubContext.Clients.All.SendAsync("TicketEstadoActualizado", payload);
 
-        if (estadoNormalizado.Equals("En proceso", StringComparison.OrdinalIgnoreCase))
-        {
-            await hubContext.Clients.All.SendAsync("TicketRecibido", payload);
-        }
-
         return Ok(new { ticket.Id, ticket.Estado });
     }
 

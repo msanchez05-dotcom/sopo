@@ -180,10 +180,6 @@
             showNotification(`Nuevo aviso recibido en ${ticket.sala}. El equipo de soporte ya lo está revisando.`);
         });
 
-        connection.on('TicketRecibido', notification => {
-            showNotification(notification.mensaje || 'Su aviso fue recibido por el equipo de soporte.');
-        });
-
         connection.on('TicketEstadoActualizado', notification => {
             if (notification && notification.mensaje) {
                 showNotification(notification.mensaje);
