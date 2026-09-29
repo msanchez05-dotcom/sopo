@@ -49,6 +49,9 @@
         .field-validation-error, .validation-summary-errors { color: #ad3f2b; font: 13px/1.4 Arial, sans-serif; }
         .validation-summary-errors { margin-bottom: 18px; }
         .actions { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-top: 4px; }
+        .qr-card { display: grid; justify-items: center; gap: 10px; margin-top: 18px; padding: 18px 14px 14px; border: 1px solid var(--line); background: white; box-shadow: var(--shadow); }
+        .qr-card img { display: block; width: 140px; height: 140px; border: 8px solid white; background: white; }
+        .qr-card p { margin: 0; color: var(--muted); text-align: center; font: 700 12px Arial, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
         button { min-height: 52px; padding: 0 22px; border: 0; border-radius: 2px; color: white; background: var(--coral); cursor: pointer; font: 700 15px Arial, sans-serif; }
         button:hover { background: #cf5f49; }
         button:disabled { opacity: .7; cursor: progress; }
@@ -134,6 +137,11 @@
                 <p class="privacy">Tu aviso quedará registrado como pendiente.</p>
                 <button id="submit-button" type="submit">Enviar aviso</button>
             </div>
+
+            <div class="qr-card" aria-label="Código QR para abrir el formulario desde el móvil">
+                <img id="qr-profesor" alt="Código QR del formulario de avisos" />
+                <p>Escanea para abrir</p>
+            </div>
         </form>
     </main>
     <partial name="_Chatbot" />
@@ -145,6 +153,12 @@
         const form = document.getElementById('ticket-form');
         const submitButton = document.getElementById('submit-button');
         const toast = document.getElementById('toast');
+        const qrImage = document.getElementById('qr-profesor');
+
+        if (qrImage) {
+            const pageUrl = encodeURIComponent(window.location.origin + '/Profesor');
+            qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${pageUrl}`;
+        }
 
         function showNotification(message) {
             if (!notificationBox) return;
