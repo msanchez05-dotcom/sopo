@@ -213,7 +213,7 @@
             }
         });
 
-        const connection = new signalR.HubConnectionBuilder().withUrl('/Tecnico/soporteHub').withAutomaticReconnect().build();
+        const connection = new signalR.HubConnectionBuilder().withUrl('/notificaciones-soporte').withAutomaticReconnect().build();
         connection.on('TicketCreado', ticket => {
             emptyState?.remove();
             list.prepend(createTicketCard(ticket));

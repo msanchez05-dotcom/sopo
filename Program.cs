@@ -96,7 +96,6 @@ app.MapControllerRoute(
 	name: "default",
 	pattern: "{controller=Profesor}/{action=Index}/{id?}");
 app.MapHub<SoporteColegio.Hubs.SoporteHub>("/notificaciones-soporte");
-app.MapHub<SoporteColegio.Hubs.SoporteHub>("/Tecnico/soporteHub");
 
 app.Run();
 
