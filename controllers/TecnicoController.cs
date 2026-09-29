@@ -38,22 +38,16 @@ public class TecnicoController : Controller
         return EstadosPermitidos.FirstOrDefault(item => item.Equals(texto, StringComparison.OrdinalIgnoreCase)) ?? texto;
     }
 
-    private static int PrioridadEstado(string estado) => estado switch
-    {
-        "Pendiente" => 0,
-        "En proceso" => 1,
-        "Resuelto" => 2,
-        _ => 99
-    };
-
     private IQueryable<Ticket> OrdenarTickets(IQueryable<Ticket> query, string orden = "prioridad")
     {
         return orden switch
         {
             "fecha_asc" => query.OrderBy(ticket => ticket.FechaReporte),
             "fecha_desc" => query.OrderByDescending(ticket => ticket.FechaReporte),
-            "estado" => query.OrderBy(ticket => PrioridadEstado(ticket.Estado)).ThenByDescending(ticket => ticket.FechaReporte),
-            _ => query.OrderBy(ticket => PrioridadEstado(ticket.Estado)).ThenByDescending(ticket => ticket.FechaReporte)
+            "estado" => query.OrderBy(ticket => ticket.Estado == "Pendiente" ? 0 : ticket.Estado == "En proceso" ? 1 : ticket.Estado == "Resuelto" ? 2 : 99)
+                .ThenByDescending(ticket => ticket.FechaReporte),
+            _ => query.OrderBy(ticket => ticket.Estado == "Pendiente" ? 0 : ticket.Estado == "En proceso" ? 1 : ticket.Estado == "Resuelto" ? 2 : 99)
+                .ThenByDescending(ticket => ticket.FechaReporte)
         };
     }
 
