@@ -15,11 +15,13 @@ public class TecnicoController : Controller
     private static readonly string[] EstadosPermitidos = ["Pendiente", "En proceso", "Resuelto"];
     private readonly ApplicationDbContext context;
     private readonly IHubContext<SoporteHub> hubContext;
+    private readonly IHubContext<ProfesorHub> profesorHubContext;
 
-    public TecnicoController(ApplicationDbContext context, IHubContext<SoporteHub> hubContext)
+    public TecnicoController(ApplicationDbContext context, IHubContext<SoporteHub> hubContext, IHubContext<ProfesorHub> profesorHubContext)
     {
         this.context = context;
         this.hubContext = hubContext;
+        this.profesorHubContext = profesorHubContext;
     }
 
     private static string NormalizarEstado(string? estado)
@@ -254,19 +256,11 @@ public class TecnicoController : Controller
         ticket.Estado = estadoNormalizado;
         await context.SaveChangesAsync();
 
-        var payload = new
-        {
-            id = ticket.Id,
-            estado = ticket.Estado,
-            sala = ticket.Sala?.Nombre ?? "Sala no disponible",
-            equipo = ticket.FallaComun?.Equipo ?? "Equipo",
-            problema = ticket.FallaComun?.Descripcion ?? "Problema",
-            detalle = ticket.DetalleAdicional,
-            mensaje = TicketNotificationService.BuildTeacherMessage(ticket.Estado)
-        };
-
         await hubContext.Clients.All.SendAsync("TicketActualizado", new { id = ticket.Id, estado = ticket.Estado });
-        await hubContext.Clients.All.SendAsync("TicketEstadoActualizado", payload);
+        await profesorHubContext.Clients.All.SendAsync("TicketEstadoActualizado", new
+        {
+            mensaje = TicketNotificationService.BuildTeacherMessage(ticket.Estado)
+        });
 
         return Ok(new { ticket.Id, ticket.Estado });
     }

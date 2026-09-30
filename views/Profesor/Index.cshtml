@@ -205,13 +205,9 @@
         });
 
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl('/notificaciones-soporte')
+            .withUrl('/notificaciones-profesor')
             .withAutomaticReconnect()
             .build();
-
-        connection.on('TicketCreado', ticket => {
-            showNotification(`Nuevo aviso recibido en ${ticket.sala}. El equipo de soporte ya lo está revisando.`);
-        });
 
         connection.on('TicketEstadoActualizado', notification => {
             if (notification && notification.mensaje) {

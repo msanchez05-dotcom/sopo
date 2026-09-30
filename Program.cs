@@ -97,6 +97,7 @@ app.MapControllerRoute(
 	name: "default",
 	pattern: "{controller=Profesor}/{action=Index}/{id?}");
 app.MapHub<SoporteColegio.Hubs.SoporteHub>("/notificaciones-soporte");
+app.MapHub<SoporteColegio.Hubs.ProfesorHub>("/notificaciones-profesor");
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
 
 app.Run();
