@@ -76,13 +76,13 @@ public class TecnicoController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Historial(string filtro = "Resuelto", string? fechaDesde = null, string? fechaHasta = null, int? salaId = null)
+    public async Task<IActionResult> Historial(string filtro = "Todos", string? fechaDesde = null, string? fechaHasta = null, int? salaId = null)
     {
         var query = context.Tickets
             .AsNoTracking()
             .Include(ticket => ticket.Sala)
             .Include(ticket => ticket.FallaComun)
-            .Where(ticket => ticket.Estado == "Resuelto" || ticket.Estado == "En proceso");
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(filtro) && !string.Equals(filtro, "Todos", StringComparison.OrdinalIgnoreCase))
         {

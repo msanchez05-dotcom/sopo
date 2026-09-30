@@ -29,6 +29,8 @@
         main { width: min(100% - 32px, 1120px); margin: 0 auto; padding: 28px 0 54px; }
         .topline, .heading, .toolbar, .ticket-head, .ticket-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
         .topline { margin-bottom: 50px; }
+        .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .header-link { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 0 12px; border: 1px solid var(--line); background: white; color: var(--ink); text-decoration: none; font-size: 12px; font-weight: 700; }
         .brand { font: 700 13px Georgia, serif; letter-spacing: .08em; text-transform: uppercase; }
         .live { display: inline-flex; align-items: center; gap: 8px; color: var(--teal); font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
         .live::before { width: 8px; height: 8px; border-radius: 50%; background: #49b76d; box-shadow: 0 0 0 4px rgba(73,183,109,.15); content: ''; }
@@ -83,7 +85,10 @@
     <main>
         <div class="topline">
             <span class="brand">Soporte colegio / Técnico</span>
-            <span class="live">En vivo</span>
+            <div class="header-actions">
+                <a class="header-link" href="/Tecnico/Historial">Historial</a>
+                <span class="live">En vivo</span>
+            </div>
         </div>
 
         <div class="heading">

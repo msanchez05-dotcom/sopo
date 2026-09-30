@@ -68,6 +68,7 @@ app.UseExceptionHandler(exceptionHandlerApp =>
 app.Use(async (context, next) =>
 {
     var isTechnicianRoute = context.Request.Path.StartsWithSegments("/Tecnico") ||
+        context.Request.Path.StartsWithSegments("/notificaciones-soporte") ||
         context.Request.Path.StartsWithSegments("/soporteHub");
 
     if (!app.Environment.IsProduction() || !isTechnicianRoute)
@@ -96,6 +97,7 @@ app.MapControllerRoute(
 	name: "default",
 	pattern: "{controller=Profesor}/{action=Index}/{id?}");
 app.MapHub<SoporteColegio.Hubs.SoporteHub>("/notificaciones-soporte");
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
 
 app.Run();
 
