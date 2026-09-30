@@ -32,6 +32,11 @@
         h1 { margin: 0 0 18px; font-size: clamp(30px, 4vw, 42px); }
         .filters { background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); padding: 18px; margin-bottom: 18px; }
         .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+        .summary { margin: 22px 0; }
+        .summary h2 { margin: 0 0 10px; font-size: 16px; }
+        .summary-wrap { overflow-x: auto; }
+        .summary table { min-width: 560px; }
+        .summary td, .summary th { white-space: nowrap; }
         label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
         input, select { width: 100%; min-height: 40px; border: 1px solid var(--line); padding: 8px 10px; font-size: 14px; }
         .toolbar { display: flex; justify-content: flex-end; margin-top: 16px; }
@@ -51,7 +56,7 @@
             <span class="brand">Soporte colegio / Historial</span>
             <div class="actions">
                 <a class="button-secondary" href="/Tecnico">Volver al panel</a>
-                <a class="button" href="/Tecnico/ExportarCsv?filtro=@Model.Filtro&fechaDesde=@Model.FechaDesde&fechaHasta=@Model.FechaHasta&salaId=@Model.SalaId">Exportar CSV</a>
+                <a class="button" asp-action="ExportarCsv" asp-route-filtro="@Model.Filtro" asp-route-fechaDesde="@Model.FechaDesde" asp-route-fechaHasta="@Model.FechaHasta" asp-route-salaId="@Model.SalaId" asp-route-busqueda="@Model.Busqueda">Exportar CSV</a>
             </div>
         </div>
 
@@ -87,11 +92,37 @@
                             }
                         </select>
                     </div>
+                    <div>
+                        <label for="busqueda">Buscar</label>
+                        <input id="busqueda" name="busqueda" type="search" value="@Model.Busqueda" placeholder="Sala, equipo o problema" />
+                    </div>
                 </div>
                 <div class="toolbar">
                     <button class="button" type="submit">Aplicar filtros</button>
                 </div>
             </form>
+        </section>
+
+        <section class="summary" aria-labelledby="summary-title">
+            <h2 id="summary-title">Actividad por sala</h2>
+            @if (Model.ResumenSalas.Count == 0)
+            {
+                <div class="empty">Sin datos por sala para los filtros actuales.</div>
+            }
+            else
+            {
+                <div class="summary-wrap">
+                    <table>
+                        <thead><tr><th>Sala</th><th>Total</th><th>Pendientes</th><th>En proceso</th><th>Resueltos</th></tr></thead>
+                        <tbody>
+                            @foreach (var resumen in Model.ResumenSalas)
+                            {
+                                <tr><td>@resumen.Sala</td><td>@resumen.Total</td><td>@resumen.Pendientes</td><td>@resumen.EnProceso</td><td>@resumen.Resueltos</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
         </section>
 
         @if (Model.Tickets.Count == 0)

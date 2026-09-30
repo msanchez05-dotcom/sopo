@@ -38,7 +38,7 @@ public class TecnicoController : Controller
         return EstadosPermitidos.FirstOrDefault(item => item.Equals(texto, StringComparison.OrdinalIgnoreCase)) ?? texto;
     }
 
-    private IQueryable<Ticket> OrdenarTickets(IQueryable<Ticket> query, string orden = "prioridad")
+    private IQueryable<Ticket> OrdenarTickets(IQueryable<Ticket> query, string orden = "urgencia")
     {
         return orden switch
         {
@@ -46,13 +46,17 @@ public class TecnicoController : Controller
             "fecha_desc" => query.OrderByDescending(ticket => ticket.FechaReporte),
             "estado" => query.OrderBy(ticket => ticket.Estado == "Pendiente" ? 0 : ticket.Estado == "En proceso" ? 1 : ticket.Estado == "Resuelto" ? 2 : 99)
                 .ThenByDescending(ticket => ticket.FechaReporte),
-            _ => query.OrderBy(ticket => ticket.Estado == "Pendiente" ? 0 : ticket.Estado == "En proceso" ? 1 : ticket.Estado == "Resuelto" ? 2 : 99)
-                .ThenByDescending(ticket => ticket.FechaReporte)
+            "urgencia" => query.OrderBy(ticket => ticket.Estado == "Resuelto" ? 1 : 0)
+                .ThenBy(ticket => ticket.Estado == "Pendiente" ? 0 : ticket.Estado == "En proceso" ? 1 : 2)
+                .ThenBy(ticket => ticket.FechaReporte),
+            _ => query.OrderBy(ticket => ticket.Estado == "Resuelto" ? 1 : 0)
+                .ThenBy(ticket => ticket.Estado == "Pendiente" ? 0 : ticket.Estado == "En proceso" ? 1 : 2)
+                .ThenBy(ticket => ticket.FechaReporte)
         };
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(string filtro = "Todos", string orden = "prioridad")
+    public async Task<IActionResult> Index(string filtro = "Todos", string orden = "urgencia", int? salaId = null, string? fechaDesde = null, string? fechaHasta = null)
     {
         var query = context.Tickets
             .AsNoTracking()
@@ -65,18 +69,38 @@ public class TecnicoController : Controller
             query = query.Where(ticket => ticket.Estado == filtro);
         }
 
+        if (salaId.HasValue)
+        {
+            query = query.Where(ticket => ticket.SalaId == salaId.Value);
+        }
+
+        if (DateTime.TryParse(fechaDesde, out var desde))
+        {
+            query = query.Where(ticket => ticket.FechaReporte >= desde);
+        }
+
+        if (DateTime.TryParse(fechaHasta, out var hasta))
+        {
+            query = query.Where(ticket => ticket.FechaReporte <= hasta.AddDays(1).AddSeconds(-1));
+        }
+
         var tickets = await OrdenarTickets(query, orden).ToListAsync();
+        var salas = await context.Salas.AsNoTracking().OrderBy(sala => sala.Nombre).ToListAsync();
 
         return View(new TecnicoPanelViewModel
         {
             Tickets = tickets,
             FiltroActual = filtro,
-            OrdenActual = orden
+            OrdenActual = orden,
+            SalaId = salaId,
+            FechaDesde = fechaDesde,
+            FechaHasta = fechaHasta,
+            Salas = salas
         });
     }
 
     [HttpGet]
-    public async Task<IActionResult> Historial(string filtro = "Todos", string? fechaDesde = null, string? fechaHasta = null, int? salaId = null)
+    public async Task<IActionResult> Historial(string filtro = "Todos", string? fechaDesde = null, string? fechaHasta = null, int? salaId = null, string? busqueda = null)
     {
         var query = context.Tickets
             .AsNoTracking()
@@ -104,13 +128,38 @@ public class TecnicoController : Controller
             query = query.Where(ticket => ticket.SalaId == salaId.Value);
         }
 
+        if (!string.IsNullOrWhiteSpace(busqueda))
+        {
+            var termino = busqueda.Trim();
+            var terminoNormalizado = termino.ToLower();
+            query = query.Where(ticket =>
+                (ticket.Sala != null && ticket.Sala.Nombre.ToLower().Contains(terminoNormalizado)) ||
+                (ticket.FallaComun != null && (ticket.FallaComun.Equipo.ToLower().Contains(terminoNormalizado) || ticket.FallaComun.Descripcion.ToLower().Contains(terminoNormalizado))) ||
+                (ticket.DetalleAdicional != null && ticket.DetalleAdicional.ToLower().Contains(terminoNormalizado)));
+        }
+
         var tickets = await OrdenarTickets(query, "fecha_desc").ToListAsync();
         var salas = await context.Salas.AsNoTracking().OrderBy(sala => sala.Nombre).ToListAsync();
+        var resumenSalas = tickets
+            .GroupBy(ticket => ticket.Sala?.Nombre ?? "Sala no disponible")
+            .Select(grupo => new TecnicoSalaResumen
+            {
+                Sala = grupo.Key,
+                Total = grupo.Count(),
+                Pendientes = grupo.Count(ticket => ticket.Estado == "Pendiente"),
+                EnProceso = grupo.Count(ticket => ticket.Estado == "En proceso"),
+                Resueltos = grupo.Count(ticket => ticket.Estado == "Resuelto")
+            })
+            .OrderByDescending(resumen => resumen.Total)
+            .ThenBy(resumen => resumen.Sala)
+            .ToList();
 
         return View(new TecnicoHistorialViewModel
         {
             Tickets = tickets,
+            ResumenSalas = resumenSalas,
             Filtro = filtro,
+            Busqueda = busqueda,
             FechaDesde = fechaDesde,
             FechaHasta = fechaHasta,
             SalaId = salaId,
@@ -119,7 +168,7 @@ public class TecnicoController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> ExportarCsv(string filtro = "Todos", string? fechaDesde = null, string? fechaHasta = null, int? salaId = null)
+    public async Task<IActionResult> ExportarCsv(string filtro = "Todos", string? fechaDesde = null, string? fechaHasta = null, int? salaId = null, string? busqueda = null)
     {
         var query = context.Tickets
             .AsNoTracking()
@@ -147,22 +196,38 @@ public class TecnicoController : Controller
             query = query.Where(ticket => ticket.SalaId == salaId.Value);
         }
 
+        if (!string.IsNullOrWhiteSpace(busqueda))
+        {
+            var termino = busqueda.Trim();
+            var terminoNormalizado = termino.ToLower();
+            query = query.Where(ticket =>
+                (ticket.Sala != null && ticket.Sala.Nombre.ToLower().Contains(terminoNormalizado)) ||
+                (ticket.FallaComun != null && (ticket.FallaComun.Equipo.ToLower().Contains(terminoNormalizado) || ticket.FallaComun.Descripcion.ToLower().Contains(terminoNormalizado))) ||
+                (ticket.DetalleAdicional != null && ticket.DetalleAdicional.ToLower().Contains(terminoNormalizado)));
+        }
+
         var tickets = await OrdenarTickets(query, "fecha_desc").ToListAsync();
 
         var csv = new StringBuilder();
-        csv.AppendLine("Id,Sala,Equipo,Problema,Detalle,Estado,Fecha");
+        csv.AppendLine("Id,Sala,Equipo,Problema,Detalle,Estado,Urgencia,Antiguedad (horas),Fecha reporte");
         foreach (var ticket in tickets)
         {
+            var fechaReporteUtc = DateTime.SpecifyKind(ticket.FechaReporte, DateTimeKind.Utc);
+            var horasTranscurridas = Math.Max(0, (DateTime.UtcNow - fechaReporteUtc).TotalHours);
+            var urgencia = ticket.Estado != "Resuelto" && horasTranscurridas >= 0.5 ? "Urgente" : "Normal";
             csv.AppendLine($"{ticket.Id}," +
                 $"{EscapeCsv(ticket.Sala?.Nombre ?? "")}," +
                 $"{EscapeCsv(ticket.FallaComun?.Equipo ?? "")}," +
                 $"{EscapeCsv(ticket.FallaComun?.Descripcion ?? "")}," +
                 $"{EscapeCsv(ticket.DetalleAdicional ?? "")}," +
                 $"{EscapeCsv(ticket.Estado)}," +
+                $"{urgencia}," +
+                $"{horasTranscurridas:F1}," +
                 $"{ticket.FechaReporte:yyyy-MM-dd HH:mm}");
         }
 
-        return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"tickets-{DateTime.UtcNow:yyyyMMddHHmmss}.csv");
+        var csvWithBom = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv.ToString())).ToArray();
+        return File(csvWithBom, "text/csv; charset=utf-8", $"tickets-{DateTime.UtcNow:yyyyMMddHHmmss}.csv");
     }
 
     [HttpPost]
@@ -208,7 +273,13 @@ public class TecnicoController : Controller
 
     private static string EscapeCsv(string value)
     {
-        return value.Contains(',') || value.Contains('"') || value.Contains('\n')
+        var contenido = value.TrimStart();
+        if (contenido.Length > 0 && "=+-@".Contains(contenido[0]))
+        {
+            value = $"'{value}";
+        }
+
+        return value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r')
             ? $"\"{value.Replace("\"", "\"\"")}\""
             : value;
     }

@@ -4,6 +4,8 @@
     var pendientes = Model.Tickets.Count(ticket => ticket.Estado == "Pendiente");
     var enProceso = Model.Tickets.Count(ticket => ticket.Estado == "En proceso");
     var resueltos = Model.Tickets.Count(ticket => ticket.Estado == "Resuelto");
+    var urgentes = Model.Tickets.Count(ticket => ticket.Estado != "Resuelto" && ticket.FechaReporte <= DateTime.Now.AddMinutes(-30));
+    var hoy = Model.Tickets.Count(ticket => ticket.FechaReporte.Date == DateTime.Today);
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -36,28 +38,45 @@
         .live::before { width: 8px; height: 8px; border-radius: 50%; background: #49b76d; box-shadow: 0 0 0 4px rgba(73,183,109,.15); content: ''; }
         h1 { margin: 0; font: 500 clamp(36px, 6vw, 64px)/.95 Georgia, serif; letter-spacing: -.04em; }
         .subtitle { max-width: 360px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
-        .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 32px 0 28px; }
+        .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 32px 0 18px; }
         .metric { padding: 18px 20px; background: var(--panel); border: 1px solid var(--line); }
         .metric strong { display: block; margin-bottom: 4px; font: 500 36px Georgia, serif; }
         .metric span { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
         .metric.pending strong { color: var(--coral); }
         .metric.progress strong { color: var(--amber); }
         .metric.done strong { color: var(--teal); }
+        .metric.alert strong { color: #7d2d2d; }
         .toolbar { margin-bottom: 14px; }
         .toolbar h2 { margin: 0; font: 700 14px Arial, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+        .filter-panel {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px; padding: 16px; border: 1px solid var(--line); background: var(--panel);
+            box-shadow: var(--shadow); margin: 0 0 18px;
+        }
+        .field { display: flex; flex-direction: column; gap: 7px; }
+        .field label { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+        .field input, .field select, .filter-panel button {
+            min-height: 38px; padding: 8px 10px; border: 1px solid var(--line); background: white; color: var(--ink); font-size: 13px;
+        }
+        .filter-panel button {
+            align-self: end; background: var(--teal); color: white; border-color: var(--teal); cursor: pointer; font-weight: 700;
+        }
         .filters { display: flex; gap: 6px; }
         .filter { padding: 9px 12px; border: 1px solid var(--line); border-radius: 20px; color: var(--muted); background: transparent; cursor: pointer; font-size: 12px; font-weight: 700; }
         .filter.active, .filter:hover { border-color: var(--teal); color: white; background: var(--teal); }
         .tickets { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; }
         .ticket { padding: 20px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); animation: appear .3s ease both; }
+        .ticket.urgent { border-color: #e9b3a6; background: #fffaf8; }
         .ticket.is-hidden { display: none; }
         .ticket-head { align-items: flex-start; }
         .ticket-id { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+        .ticket-meta { margin-top: 14px; }
+        .urgency-badge { display: inline-flex; align-items: center; padding: 5px 8px; border-radius: 999px; background: #fff0e9; color: #9b4538; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
         .status { padding: 6px 9px; border-radius: 14px; font-size: 11px; font-weight: 700; }
         .status.pendiente { color: #a64d37; background: #fff0e9; }
         .status.en-proceso { color: #916317; background: #fff6dc; }
         .status.resuelto { color: var(--teal-dark); background: #e5f3eb; }
-        .room { margin: 24px 0 6px; font: 500 26px/1.05 Georgia, serif; }
+        .room { margin: 18px 0 6px; font: 500 26px/1.05 Georgia, serif; }
         .problem { margin: 0; font-size: 14px; line-height: 1.45; }
         .detail { margin: 16px 0 0; padding: 12px; color: var(--muted); background: #f5f7f5; font-size: 13px; line-height: 1.45; }
         .ticket-foot { align-items: flex-end; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line); }
@@ -100,7 +119,48 @@
             <div class="metric pending"><strong id="pending-count">@pendientes</strong><span>Pendientes</span></div>
             <div class="metric progress"><strong id="progress-count">@enProceso</strong><span>En proceso</span></div>
             <div class="metric done"><strong id="done-count">@resueltos</strong><span>Resueltos</span></div>
+            <div class="metric alert"><strong id="urgent-count">@urgentes</strong><span>Urgentes</span></div>
         </section>
+
+        <form class="filter-panel" method="get" asp-action="Index">
+            <div class="field">
+                <label for="filtro">Estado</label>
+                <select id="filtro" name="filtro">
+                    @foreach (var estado in new[] { "Todos", "Pendiente", "En proceso", "Resuelto" })
+                    {
+                        <option value="@estado" selected="@(Model.FiltroActual == estado ? "selected" : null)">@estado</option>
+                    }
+                </select>
+            </div>
+            <div class="field">
+                <label for="salaId">Sala</label>
+                <select id="salaId" name="salaId">
+                    <option value="">Todas</option>
+                    @foreach (var sala in Model.Salas)
+                    {
+                        <option value="@sala.Id" selected="@(Model.SalaId == sala.Id ? "selected" : null)">@sala.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="field">
+                <label for="fechaDesde">Desde</label>
+                <input id="fechaDesde" name="fechaDesde" type="date" value="@Model.FechaDesde" />
+            </div>
+            <div class="field">
+                <label for="fechaHasta">Hasta</label>
+                <input id="fechaHasta" name="fechaHasta" type="date" value="@Model.FechaHasta" />
+            </div>
+            <div class="field">
+                <label for="orden">Orden</label>
+                <select id="orden" name="orden">
+                    <option value="urgencia" selected="@(Model.OrdenActual == "urgencia" ? "selected" : null)">Urgencia</option>
+                    <option value="fecha_desc" selected="@(Model.OrdenActual == "fecha_desc" ? "selected" : null)">Más recientes</option>
+                    <option value="fecha_asc" selected="@(Model.OrdenActual == "fecha_asc" ? "selected" : null)">Más antiguos</option>
+                    <option value="estado" selected="@(Model.OrdenActual == "estado" ? "selected" : null)">Estado</option>
+                </select>
+            </div>
+            <button type="submit">Aplicar</button>
+        </form>
 
         <div class="toolbar">
             <h2>Actividad reciente</h2>
@@ -119,10 +179,14 @@
             }
             @foreach (var ticket in Model.Tickets)
             {
-                <article class="ticket" data-ticket-id="@ticket.Id" data-status="@ticket.Estado">
+                var isUrgent = ticket.Estado != "Resuelto" && ticket.FechaReporte <= DateTime.Now.AddMinutes(-30);
+                <article class="ticket @(isUrgent ? "urgent" : "")" data-ticket-id="@ticket.Id" data-status="@ticket.Estado" data-created-at="@ticket.FechaReporte.ToString("o")">
                     <div class="ticket-head">
                         <span class="ticket-id">AVISO #@ticket.Id</span>
                         <span class="status @ticket.Estado.ToLowerInvariant().Replace(" ", "-")">@ticket.Estado</span>
+                    </div>
+                    <div class="ticket-meta">
+                        <span class="urgency-badge" data-created-at="@ticket.FechaReporte.ToString("o")">Calculando...</span>
                     </div>
                     <h3 class="room">@(ticket.Sala?.Nombre ?? "Sala no disponible")</h3>
                     <p class="problem"><strong>@(ticket.FallaComun?.Equipo ?? "Equipo"):</strong> @(ticket.FallaComun?.Descripcion ?? "Problema no disponible")</p>
@@ -152,17 +216,63 @@
         const emptyState = document.getElementById('empty-state');
         const token = document.querySelector('#anti-forgery-form input[name="__RequestVerificationToken"]').value;
         let activeFilter = 'Todos';
+        let urgencyToast;
 
         const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
         const statusClass = status => status.toLowerCase().replaceAll(' ', '-');
         const formatDate = value => new Date(value).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' });
 
+        function formatRelativeTime(dateValue) {
+            const diffMs = Date.now() - new Date(dateValue).getTime();
+            if (Number.isNaN(diffMs)) return 'Tiempo desconocido';
+
+            const minutes = Math.max(0, Math.round(diffMs / 60000));
+            if (minutes < 1) return 'Hace menos de 1 min';
+            if (minutes < 60) return `Hace ${minutes} min`;
+            const hours = Math.round(minutes / 60);
+            if (hours < 24) return `Hace ${hours} h`;
+            const days = Math.round(hours / 24);
+            return `Hace ${days} día${days > 1 ? 's' : ''}`;
+        }
+
+        function updateUrgencyLabels() {
+            document.querySelectorAll('[data-created-at]').forEach(element => {
+                const value = element.dataset.createdAt;
+                if (!value) return;
+                element.textContent = formatRelativeTime(value);
+            });
+            checkUrgencyAlerts();
+        }
+
+        function showUrgencyToast(card) {
+            urgencyToast?.remove();
+            urgencyToast = document.createElement('div');
+            urgencyToast.className = 'toast';
+            urgencyToast.setAttribute('role', 'alert');
+            urgencyToast.textContent = `Aviso urgente: ${card.querySelector('.room')?.textContent ?? 'sala'} lleva más de 30 minutos sin resolverse.`;
+            document.body.appendChild(urgencyToast);
+            setTimeout(() => urgencyToast?.remove(), 6000);
+        }
+
+        function checkUrgencyAlerts() {
+            document.querySelectorAll('.ticket').forEach(card => {
+                const overdue = card.dataset.status !== 'Resuelto' && Date.now() - new Date(card.dataset.createdAt).getTime() >= 30 * 60 * 1000;
+                card.classList.toggle('urgent', overdue);
+                if (overdue && card.dataset.urgencyNotified !== 'true') {
+                    card.dataset.urgencyNotified = 'true';
+                    showUrgencyToast(card);
+                }
+            });
+        }
+
         function updateMetrics() {
             const cards = [...document.querySelectorAll('.ticket')];
             const count = status => cards.filter(card => card.dataset.status === status).length;
+            const urgentCount = cards.filter(card => card.dataset.status !== 'Resuelto' && Number(Date.now() - new Date(card.dataset.createdAt).getTime()) > 30 * 60 * 1000).length;
             document.getElementById('pending-count').textContent = count('Pendiente');
             document.getElementById('progress-count').textContent = count('En proceso');
             document.getElementById('done-count').textContent = count('Resuelto');
+            document.getElementById('urgent-count').textContent = urgentCount;
         }
 
         function applyFilter() {
@@ -173,18 +283,22 @@
 
         function createTicketCard(ticket) {
             const article = document.createElement('article');
+            const createdAt = ticket.fecha ?? new Date().toISOString();
             article.className = 'ticket';
             article.dataset.ticketId = ticket.id;
             article.dataset.status = ticket.estado;
+            article.dataset.createdAt = createdAt;
+            article.dataset.urgencyNotified = 'false';
             const options = ['Pendiente', 'En proceso', 'Resuelto']
                 .map(value => `<option value="${escapeHtml(value)}" ${ticket.estado === value ? 'selected' : ''}>${escapeHtml(value)}</option>`)
                 .join('');
             article.innerHTML = `
                 <div class="ticket-head"><span class="ticket-id">AVISO #${escapeHtml(ticket.id)}</span><span class="status ${statusClass(ticket.estado)}">${escapeHtml(ticket.estado)}</span></div>
+                <div class="ticket-meta"><span class="urgency-badge" data-created-at="${createdAt}">Calculando...</span></div>
                 <h3 class="room">${escapeHtml(ticket.sala)}</h3>
                 <p class="problem"><strong>${escapeHtml(ticket.equipo)}:</strong> ${escapeHtml(ticket.problema)}</p>
                 ${ticket.detalle ? `<p class="detail">${escapeHtml(ticket.detalle)}</p>` : ''}
-                <div class="ticket-foot"><span class="date">${formatDate(ticket.fecha)}</span><select class="state-select" aria-label="Cambiar estado del aviso ${ticket.id}">${options}</select></div>`;
+                <div class="ticket-foot"><span class="date">${formatDate(createdAt)}</span><select class="state-select" aria-label="Cambiar estado del aviso ${ticket.id}">${options}</select></div>`;
             return article;
         }
 
@@ -209,8 +323,11 @@
             try {
                 await updateTicket(card, event.target.value);
                 card.dataset.status = event.target.value;
+                card.dataset.createdAt = card.dataset.createdAt || new Date().toISOString();
+                card.dataset.urgencyNotified = event.target.value === 'Resuelto' ? 'true' : 'false';
                 card.querySelector('.status').className = `status ${statusClass(event.target.value)}`;
                 card.querySelector('.status').textContent = event.target.value;
+                updateUrgencyLabels();
                 updateMetrics();
                 applyFilter();
             } catch (error) {
@@ -218,10 +335,20 @@
             }
         });
 
+        document.querySelectorAll('.ticket').forEach(card => {
+            const overdue = card.dataset.status !== 'Resuelto' && Date.now() - new Date(card.dataset.createdAt).getTime() >= 30 * 60 * 1000;
+            card.dataset.urgencyNotified = overdue ? 'true' : 'false';
+        });
+        updateUrgencyLabels();
+        updateMetrics();
+        setInterval(updateUrgencyLabels, 60000);
+
         const connection = new signalR.HubConnectionBuilder().withUrl('/notificaciones-soporte').withAutomaticReconnect().build();
         connection.on('TicketCreado', ticket => {
             emptyState?.remove();
-            list.prepend(createTicketCard(ticket));
+            const newCard = createTicketCard(ticket);
+            list.prepend(newCard);
+            updateUrgencyLabels();
             updateMetrics();
             applyFilter();
             const toast = document.createElement('div');
@@ -234,9 +361,12 @@
             const card = document.querySelector(`[data-ticket-id="${update.id}"]`);
             if (!card) return;
             card.dataset.status = update.estado;
+            card.dataset.urgencyNotified = update.estado === 'Resuelto' ? 'true' : 'false';
+            if (update.estado === 'Resuelto') card.dataset.urgencyNotified = 'true';
             card.querySelector('.status').className = `status ${statusClass(update.estado)}`;
             card.querySelector('.status').textContent = update.estado;
             card.querySelector('.state-select').value = update.estado;
+            updateUrgencyLabels();
             updateMetrics();
             applyFilter();
         });
