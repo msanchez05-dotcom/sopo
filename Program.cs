@@ -39,8 +39,9 @@ else
 
 var technicianUsername = builder.Configuration["TECHNICIAN_USERNAME"];
 var technicianPassword = builder.Configuration["TECHNICIAN_PASSWORD"];
-if (builder.Environment.IsProduction() &&
-    (string.IsNullOrWhiteSpace(technicianUsername) || string.IsNullOrWhiteSpace(technicianPassword)))
+var hasTechnicianCredentials = !string.IsNullOrWhiteSpace(technicianUsername) && !string.IsNullOrWhiteSpace(technicianPassword);
+
+if (builder.Environment.IsProduction() && !hasTechnicianCredentials)
 {
     throw new InvalidOperationException("TECHNICIAN_USERNAME y TECHNICIAN_PASSWORD son obligatorios en producción.");
 }
@@ -71,7 +72,7 @@ app.Use(async (context, next) =>
         context.Request.Path.StartsWithSegments("/notificaciones-soporte") ||
         context.Request.Path.StartsWithSegments("/soporteHub");
 
-    if (!app.Environment.IsProduction() || !isTechnicianRoute)
+    if (!isTechnicianRoute || !hasTechnicianCredentials)
     {
         await next();
         return;

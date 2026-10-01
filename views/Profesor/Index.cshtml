@@ -58,8 +58,21 @@
         button:hover { background: #cf5f49; }
         button:disabled { opacity: .7; cursor: progress; }
         .success { margin: 0 0 22px; padding: 14px 16px; border-left: 4px solid var(--teal); color: var(--teal-dark); background: #e3f1e8; font: 15px/1.45 Arial, sans-serif; }
-        .status-box { display: none; margin: 0 0 18px; padding: 14px 16px; border-left: 4px solid var(--coral); color: var(--ink); background: #fff5ea; font: 15px/1.45 Arial, sans-serif; }
+        .status-box {
+            display: none;
+            margin: 0 0 18px;
+            padding: 14px 16px;
+            border-left: 4px solid var(--coral);
+            color: var(--ink);
+            background: #fff5ea;
+            font: 15px/1.45 Arial, sans-serif;
+        }
         .status-box.visible { display: block; }
+        .status-box[data-state="Pendiente"] { border-left-color: var(--coral); background: #fff5ea; }
+        .status-box[data-state="En proceso"] { border-left-color: #c48422; background: #fff8e8; }
+        .status-box[data-state="Resuelto"] { border-left-color: var(--teal); background: #e3f1e8; }
+        .status-box strong { display: block; margin-bottom: 4px; }
+        .status-box span { display: block; margin-bottom: 4px; color: var(--muted); }
         .privacy { margin: 0; color: var(--muted); font: 12px/1.4 Arial, sans-serif; }
         .toast { position: fixed; right: 20px; bottom: 20px; max-width: 320px; padding: 14px 16px; color: white; background: var(--teal-dark); box-shadow: var(--shadow); font: 14px/1.4 Arial, sans-serif; opacity: 0; transform: translateY(12px); transition: opacity .25s ease, transform .25s ease; }
         .toast.visible { opacity: 1; transform: translateY(0); }
@@ -161,6 +174,7 @@
         const qrImage = document.getElementById('qr-profesor');
         const copyLinkButton = document.getElementById('copy-link-button');
         const professorUrl = window.location.origin + '/Profesor';
+        const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
 
         if (qrImage) {
             const pageUrl = encodeURIComponent(professorUrl);
@@ -210,8 +224,27 @@
             .build();
 
         connection.on('TicketEstadoActualizado', notification => {
-            if (notification && notification.mensaje) {
-                showNotification(notification.mensaje);
+            if (!notification) return;
+
+            const estado = notification.estado || 'Pendiente';
+            const detalle = [notification.sala, notification.equipo, notification.problema].filter(Boolean).join(' · ');
+            const mensaje = notification.mensaje || 'El estado de su aviso ha cambiado.';
+
+            if (notificationBox) {
+                notificationBox.dataset.state = estado;
+                notificationBox.innerHTML = `
+                    <strong>Estado del aviso: ${escapeHtml(estado)}</strong>
+                    ${detalle ? `<span>${escapeHtml(detalle)}</span>` : ''}
+                    <span>${escapeHtml(mensaje)}</span>
+                `;
+                notificationBox.classList.add('visible');
+                setTimeout(() => notificationBox.classList.remove('visible'), 7000);
+            }
+
+            if (toast) {
+                toast.textContent = `Aviso actualizado: ${estado}`;
+                toast.classList.add('visible');
+                setTimeout(() => toast.classList.remove('visible'), 4200);
             }
         });
 

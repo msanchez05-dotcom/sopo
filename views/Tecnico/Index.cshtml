@@ -76,12 +76,20 @@
         .status.pendiente { color: #a64d37; background: #fff0e9; }
         .status.en-proceso { color: #916317; background: #fff6dc; }
         .status.resuelto { color: var(--teal-dark); background: #e5f3eb; }
-        .room { margin: 18px 0 6px; font: 500 26px/1.05 Georgia, serif; }
+        .ticket-body { display: grid; gap: 12px; margin-top: 14px; }
+        .ticket-summary {
+            display: grid; gap: 5px; padding: 10px 12px; background: #f7f9f8; border: 1px solid var(--line);
+        }
+        .summary-label {
+            color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+        }
+        .room { margin: 0; font: 500 26px/1.05 Georgia, serif; }
         .problem { margin: 0; font-size: 14px; line-height: 1.45; }
-        .detail { margin: 16px 0 0; padding: 12px; color: var(--muted); background: #f5f7f5; font-size: 13px; line-height: 1.45; }
+        .detail { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
         .ticket-foot { align-items: flex-end; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line); }
         .date { color: var(--muted); font-size: 11px; }
         .state-select { min-height: 34px; padding: 0 8px; border: 1px solid var(--line); color: var(--ink); background: white; font-size: 12px; }
+        .state-select:focus { outline: 3px solid rgba(8,127,120,.18); }
         .empty { grid-column: 1 / -1; padding: 48px 20px; border: 1px dashed #b9c8c2; color: var(--muted); text-align: center; }
         .toast { position: fixed; right: 20px; bottom: 20px; max-width: 320px; padding: 14px 16px; color: white; background: var(--teal-dark); box-shadow: var(--shadow); font-size: 13px; animation: appear .25s ease both; }
         @@keyframes appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -188,12 +196,27 @@
                     <div class="ticket-meta">
                         <span class="urgency-badge" data-created-at="@ticket.FechaReporte.ToString("o")">Calculando...</span>
                     </div>
-                    <h3 class="room">@(ticket.Sala?.Nombre ?? "Sala no disponible")</h3>
-                    <p class="problem"><strong>@(ticket.FallaComun?.Equipo ?? "Equipo"):</strong> @(ticket.FallaComun?.Descripcion ?? "Problema no disponible")</p>
-                    @if (!string.IsNullOrWhiteSpace(ticket.DetalleAdicional))
-                    {
-                        <p class="detail">@ticket.DetalleAdicional</p>
-                    }
+
+                    <div class="ticket-body">
+                        <div class="ticket-summary">
+                            <span class="summary-label">Sala</span>
+                            <h3 class="room">@(ticket.Sala?.Nombre ?? "Sala no disponible")</h3>
+                        </div>
+
+                        <div class="ticket-summary">
+                            <span class="summary-label">Tipo de trabajo</span>
+                            <p class="problem"><strong>@(ticket.FallaComun?.Equipo ?? "Equipo"):</strong> @(ticket.FallaComun?.Descripcion ?? "Problema no disponible")</p>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(ticket.DetalleAdicional))
+                        {
+                            <div class="ticket-summary">
+                                <span class="summary-label">Detalle del aviso</span>
+                                <p class="detail">@ticket.DetalleAdicional</p>
+                            </div>
+                        }
+                    </div>
+
                     <div class="ticket-foot">
                         <span class="date">@ticket.FechaReporte.ToString("dd/MM/yyyy HH:mm")</span>
                         <select class="state-select" aria-label="Cambiar estado del aviso @ticket.Id">
@@ -236,7 +259,7 @@
         }
 
         function updateUrgencyLabels() {
-            document.querySelectorAll('[data-created-at]').forEach(element => {
+            document.querySelectorAll('.urgency-badge[data-created-at]').forEach(element => {
                 const value = element.dataset.createdAt;
                 if (!value) return;
                 element.textContent = formatRelativeTime(value);
@@ -295,9 +318,11 @@
             article.innerHTML = `
                 <div class="ticket-head"><span class="ticket-id">AVISO #${escapeHtml(ticket.id)}</span><span class="status ${statusClass(ticket.estado)}">${escapeHtml(ticket.estado)}</span></div>
                 <div class="ticket-meta"><span class="urgency-badge" data-created-at="${createdAt}">Calculando...</span></div>
-                <h3 class="room">${escapeHtml(ticket.sala)}</h3>
-                <p class="problem"><strong>${escapeHtml(ticket.equipo)}:</strong> ${escapeHtml(ticket.problema)}</p>
-                ${ticket.detalle ? `<p class="detail">${escapeHtml(ticket.detalle)}</p>` : ''}
+                <div class="ticket-body">
+                    <div class="ticket-summary"><span class="summary-label">Sala</span><h3 class="room">${escapeHtml(ticket.sala)}</h3></div>
+                    <div class="ticket-summary"><span class="summary-label">Tipo de trabajo</span><p class="problem"><strong>${escapeHtml(ticket.equipo)}:</strong> ${escapeHtml(ticket.problema)}</p></div>
+                    ${ticket.detalle ? `<div class="ticket-summary"><span class="summary-label">Detalle del aviso</span><p class="detail">${escapeHtml(ticket.detalle)}</p></div>` : ''}
+                </div>
                 <div class="ticket-foot"><span class="date">${formatDate(createdAt)}</span><select class="state-select" aria-label="Cambiar estado del aviso ${ticket.id}">${options}</select></div>`;
             return article;
         }

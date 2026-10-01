@@ -259,6 +259,12 @@ public class TecnicoController : Controller
         await hubContext.Clients.All.SendAsync("TicketActualizado", new { id = ticket.Id, estado = ticket.Estado });
         await profesorHubContext.Clients.All.SendAsync("TicketEstadoActualizado", new
         {
+            ticketId = ticket.Id,
+            estado = ticket.Estado,
+            sala = ticket.Sala?.Nombre,
+            equipo = ticket.FallaComun?.Equipo,
+            problema = ticket.FallaComun?.Descripcion,
+            detalle = ticket.DetalleAdicional,
             mensaje = TicketNotificationService.BuildTeacherMessage(ticket.Estado)
         });
 
